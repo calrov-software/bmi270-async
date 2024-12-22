@@ -2,7 +2,7 @@
 
 [![stability-wip](https://img.shields.io/badge/stability-wip-lightgrey.svg)](https://github.com/mkenney/software-guides/blob/master/STABILITY-BADGES.md#work-in-progress)
 
-This is an [embedded-hal](https://github.com/rust-embedded/embedded-hal) driver for the Bosch BMI260/270 inertial measurement unit.
+This is an [embedded-hal-async](https://github.com/rust-embedded/embedded-hal) driver for the Bosch BMI260/270 inertial measurement unit.
 
 ## Quick start
 
@@ -13,21 +13,21 @@ This is an [embedded-hal](https://github.com/rust-embedded/embedded-hal) driver 
 /// Configure the max data burst to 255 bytes:
 /// - used for the upload of the configuration during initialization.
 /// - This is a limitation from your device or its HAL. 
-let mut bmi = Bmi270::new_i2c(i2c, I2cAddr::Alternative, Burst::Other(255));
+let mut bmi = Bmi270::new_i2c(i2c, I2cAddr::Alternative, Burst::Other(255)).await;
 
 /// Get the chip id. Should be 0x24 or 36 in decimal
-let chip_id = bmi.get_chip_id().unwrap();
+let chip_id = bmi.get_chip_id().await.unwrap();
 
 /// Initialize the senor.
 /// During this process a configuration of > 8kB is uploaded to the sensor.
-bmi.init(&config::BMI270_CONFIG_FILE).unwrap();
+bmi.init(&config::BMI270_CONFIG_FILE).await.unwrap();
 
 /// Enable power for the accelerometer and the gyroscope.
 let pwr_ctrl = PwrCtrl { aux_en: false, gyr_en: true, acc_en: true, temp_en: false };
-bmi.set_pwr_ctrl(pwr_ctrl).unwrap();
+bmi.set_pwr_ctrl(pwr_ctrl).await.unwrap();
 
 /// Read the raw data
-let data = bmi.get_data().unwrap();
+let data = bmi.get_data().await.unwrap();
 
 // ...
 ```
