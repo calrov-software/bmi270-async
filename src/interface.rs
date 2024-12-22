@@ -1,6 +1,6 @@
 use crate::types::Error;
-use embedded_hal::blocking::{i2c, spi};
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::{i2c, spi};
+use embedded_hal::digital::OutputPin;
 
 const BMI270_I2C_ADDR: u8 = 0x68;
 
@@ -51,7 +51,7 @@ pub trait ReadData {
 
 impl<I2C, E> WriteData for I2cInterface<I2C>
 where
-    I2C: i2c::Write<Error = E>,
+    I2C: i2c::I2c<Error = E>,
 {
     type Error = Error<E, ()>;
     fn write(&mut self, payload: &mut [u8]) -> Result<(), Self::Error> {
@@ -70,7 +70,7 @@ where
 
 impl<SPI, CS, CommE, CsE> WriteData for SpiInterface<SPI, CS>
 where
-    SPI: spi::Write<u8, Error = CommE>,
+    SPI: spi::SpiDevice<u8, Error = CommE>,
     CS: OutputPin<Error = CsE>,
 {
     type Error = Error<CommE, CsE>;
@@ -97,7 +97,7 @@ where
 
 impl<I2C, E> ReadData for I2cInterface<I2C>
 where
-    I2C: i2c::WriteRead<Error = E>,
+    I2C: i2c::I2c<Error = E>,
 {
     type Error = Error<E, ()>;
     fn read(&mut self, payload: &mut [u8]) -> Result<(), Self::Error> {
@@ -117,13 +117,13 @@ where
 
 impl<SPI, CS, CommE, CsE> ReadData for SpiInterface<SPI, CS>
 where
-    SPI: spi::Transfer<u8, Error = CommE>,
+    SPI: spi::SpiDevice<u8, Error = CommE>,
     CS: OutputPin<Error = CsE>,
 {
     type Error = Error<CommE, CsE>;
     fn read(&mut self, payload: &mut [u8]) -> Result<(), Self::Error> {
         self.cs.set_low().map_err(Error::Cs)?;
-        let res = self.spi.transfer(payload).map_err(Error::Comm);
+        let res = self.spi.read(payload).map_err(Error::Comm);
         self.cs.set_high().map_err(Error::Cs)?;
 
         res?;
@@ -132,11 +132,12 @@ where
 
     fn read_reg(&mut self, register: u8) -> Result<u8, Self::Error> {
         let mut payload = [register, 0];
+        let mut rxbuf = [0u8; 2];
 
         self.cs.set_low().map_err(Error::Cs)?;
-        let res = self.spi.transfer(&mut payload).map_err(Error::Comm);
+        self.spi.transfer(&mut payload, &mut rxbuf).map_err(Error::Comm)?;
         self.cs.set_high().map_err(Error::Cs)?;
 
-        Ok(res?[1])
+        Ok(rxbuf[1])
     }
 }
